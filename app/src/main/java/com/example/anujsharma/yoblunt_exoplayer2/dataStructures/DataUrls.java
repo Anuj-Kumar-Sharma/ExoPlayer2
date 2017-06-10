@@ -16,6 +16,7 @@ public class DataUrls {
     public ArrayList<String> getDataUrls() {
         dataUrls = new ArrayList<>();
         //String uriPath = "http://playertest.longtailvideo.com/adaptive/bbbfull/bbbfull.m3u8";
+        //String uriPath = "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4";
         String uriPath = "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4";
         for (int i = 0; i < dataCount; i++) {
             dataUrls.add(uriPath);
