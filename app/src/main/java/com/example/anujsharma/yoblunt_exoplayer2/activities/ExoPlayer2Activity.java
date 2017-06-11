@@ -100,7 +100,7 @@ public class ExoPlayer2Activity extends Activity {
 
 
 
-        player.addListener(new ExoPlayer.EventListener() {
+        /*player.addListener(new ExoPlayer.EventListener() {
             @Override
             public void onLoadingChanged(boolean isLoading) {
                 Log.v(TAG,"Listener-onLoadingChanged...");
@@ -132,7 +132,7 @@ public class ExoPlayer2Activity extends Activity {
                 Log.v(TAG,"Listener-onPositionDiscontinuity...");
 
             }
-        });
+        });*/
         player.setPlayWhenReady(true);
 
     }
