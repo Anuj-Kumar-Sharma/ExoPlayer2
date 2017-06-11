@@ -1,24 +1,18 @@
 package com.example.anujsharma.yoblunt_exoplayer2.adapters;
 
 import android.content.Context;
-import android.content.Intent;
-import android.graphics.Bitmap;
-import android.media.MediaMetadataRetriever;
+import android.media.session.PlaybackState;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Handler;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.TextView;
 
 import com.example.anujsharma.yoblunt_exoplayer2.R;
-import com.example.anujsharma.yoblunt_exoplayer2.activities.ExoPlayer2Activity;
-import com.example.anujsharma.yoblunt_exoplayer2.dataStructures.VideoData;
 import com.google.android.exoplayer2.DefaultLoadControl;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayer;
@@ -26,8 +20,6 @@ import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.LoadControl;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.Timeline;
-import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory;
-import com.google.android.exoplayer2.extractor.ExtractorsFactory;
 import com.google.android.exoplayer2.source.LoopingMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.hls.HlsMediaSource;
@@ -42,17 +34,26 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdapter.ViewHolder>{
 
+    private static String TAG = "myErrors";
     private Context context;
     private ArrayList<String> dataUrls;
-    private static String TAG = "myErrors";
+    private SimpleExoPlayer player;
 
     public DisplayVideosAdapter(Context context, ArrayList<String> dataUrls) {
         this.context = context;
         this.dataUrls = dataUrls;
+
+        Handler mainHandler = new Handler();
+        BandwidthMeter bandwidthMeter = new DefaultBandwidthMeter();
+        TrackSelection.Factory videoTrackSelectionFactory = new AdaptiveVideoTrackSelection.Factory(bandwidthMeter);
+        TrackSelector trackSelector = new DefaultTrackSelector(mainHandler, videoTrackSelectionFactory);
+
+        LoadControl loadControl = new DefaultLoadControl();
+
+        player = ExoPlayerFactory.newSimpleInstance(context, trackSelector, loadControl);
     }
 
     @Override
@@ -62,18 +63,25 @@ public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdap
     }
 
     @Override
-    public void onBindViewHolder(ViewHolder holder, int position) {
+    public void onBindViewHolder(final ViewHolder holder, int position) {
         final String videoUrl = dataUrls.get(position);
 
-        PostVideoBitmapWorkerTask task = new PostVideoBitmapWorkerTask(holder.simpleExoPlayerView);
-        task.execute(videoUrl);
+        holder.simpleExoPlayerView.setUseController(false);
+        holder.simpleExoPlayerView.requestFocus();
+        Log.d(TAG, "inside OnBindView");
 
-        holder.mView.setOnClickListener(new View.OnClickListener() {
+        holder.simpleExoPlayerView.setOnTouchListener(new View.OnTouchListener() {
             @Override
-            public void onClick(View v) {
-                /*Intent intent  = new Intent(context, ExoPlayer2Activity.class);
-                intent.putExtra("videoUrl", videoUrl);
-                context.startActivity(intent);*/
+            public boolean onTouch(View v, MotionEvent event) {
+                holder.simpleExoPlayerView.setPlayer(player);
+
+                if (player.getPlaybackState() == PlaybackState.STATE_PLAYING) {
+                    player.setPlayWhenReady(false);
+                } else {
+                    PostVideoBitmapWorkerTask task = new PostVideoBitmapWorkerTask(holder.simpleExoPlayerView, player);
+                    task.execute("dummy URL");
+                }
+                return true;
             }
         });
     }
@@ -83,15 +91,19 @@ public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdap
         return dataUrls.size();
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder{
+    public class ViewHolder extends RecyclerView.ViewHolder {
 
-        private View mView;
         private SimpleExoPlayerView simpleExoPlayerView;
+
         public ViewHolder(View itemView) {
             super(itemView);
-            mView = itemView;
+
+            simpleExoPlayerView = new SimpleExoPlayerView(context);
             simpleExoPlayerView = (SimpleExoPlayerView) itemView.findViewById(R.id.pvPlayerView);
+
+
         }
+
     }
 
 
@@ -101,24 +113,9 @@ public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdap
         private SimpleExoPlayerView simpleExoPlayerView;
         private SimpleExoPlayer player;
 
-        public PostVideoBitmapWorkerTask(SimpleExoPlayerView simpleExoPlayerView) {
+        public PostVideoBitmapWorkerTask(SimpleExoPlayerView simpleExoPlayerView, SimpleExoPlayer player) {
 
-
-            Handler mainHandler = new Handler();
-            BandwidthMeter bandwidthMeter = new DefaultBandwidthMeter();
-            TrackSelection.Factory videoTrackSelectionFactory = new AdaptiveVideoTrackSelection.Factory(bandwidthMeter);
-            TrackSelector trackSelector = new DefaultTrackSelector(mainHandler, videoTrackSelectionFactory);
-
-            LoadControl loadControl = new DefaultLoadControl();
-
-            player = ExoPlayerFactory.newSimpleInstance(context, trackSelector, loadControl);
-            this.simpleExoPlayerView = new SimpleExoPlayerView(context);
-            this.simpleExoPlayerView = simpleExoPlayerView;
-
-            this.simpleExoPlayerView.setUseController(true);
-            this.simpleExoPlayerView.requestFocus();
-
-            this.simpleExoPlayerView.setPlayer(player);
+            this.player = player;
         }
 
         @Override
@@ -126,10 +123,11 @@ public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdap
             videoUrl = params[0];
             ////////////////////////////////////////////////////////////////////////////////////////////////
 
+            Log.d(TAG, "starting doinBackground");
             Uri mp4VideoUri =Uri.parse("http://playertest.longtailvideo.com/adaptive/bbbfull/bbbfull.m3u8");
 
             DefaultBandwidthMeter bandwidthMeterA = new DefaultBandwidthMeter();
-            DefaultDataSourceFactory dataSourceFactory = new DefaultDataSourceFactory(context, Util.getUserAgent(context, "exoplayer2example"), bandwidthMeterA);
+            DefaultDataSourceFactory dataSourceFactory = new DefaultDataSourceFactory(context, Util.getUserAgent(context, "yoblunt_exoplayer2"), bandwidthMeterA);
 
             MediaSource videoSource = new HlsMediaSource(mp4VideoUri, dataSourceFactory, 1, null, null);
             final LoopingMediaSource loopingSource = new LoopingMediaSource(videoSource);
@@ -171,53 +169,14 @@ public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdap
                 }
             });
 
-
             /////////////////////////////////////////////////////////////////////////////////////////////////
             return null;
         }
 
         @Override
         protected void onPostExecute(Void aVoid) {
+            Log.d(TAG, "inside onPostExecute");
             player.setPlayWhenReady(true);
-        }
-
-        public VideoData retrieveVideoData(String videoPath) throws Throwable
-        {
-            Bitmap bitmap = null;
-            String url, duration, date, caption;
-            VideoData videoData;
-            Log.d(TAG, "inside Video Data method");
-            Log.d(TAG, videoPath);
-            MediaMetadataRetriever mediaMetadataRetriever = null;
-            try
-            {
-                mediaMetadataRetriever = new MediaMetadataRetriever();
-                if (Build.VERSION.SDK_INT >= 14) {
-                    mediaMetadataRetriever.setDataSource(videoPath, new HashMap<String, String>());
-                    Log.d(TAG, "inside if statement");
-                }
-                else
-                    mediaMetadataRetriever.setDataSource(videoPath);
-                bitmap = mediaMetadataRetriever.getFrameAtTime();
-                url = videoPath;
-                duration = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
-                date = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DATE);
-                caption = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
-
-                Log.d(TAG, duration+date+caption+url);
-                videoData = new VideoData(url, date, duration, bitmap, caption);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                Log.d(TAG, e.getMessage());
-                throw new Throwable("Exception in retriveVideoFrameFromVideo(String videoPath)" + e.getMessage());
-
-            } finally {
-                if (mediaMetadataRetriever != null) {
-                    mediaMetadataRetriever.release();
-                }
-            }
-            return videoData;
         }
     }
 }
