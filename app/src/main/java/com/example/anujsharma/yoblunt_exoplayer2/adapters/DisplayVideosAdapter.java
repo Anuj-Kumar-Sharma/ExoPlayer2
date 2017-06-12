@@ -1,7 +1,6 @@
 package com.example.anujsharma.yoblunt_exoplayer2.adapters;
 
 import android.content.Context;
-import android.media.session.PlaybackState;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Handler;
@@ -75,15 +74,13 @@ public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdap
             public boolean onTouch(View v, MotionEvent event) {
                 holder.simpleExoPlayerView.setPlayer(player);
 
-                if (player.getPlaybackState() == PlaybackState.STATE_PLAYING) {
-                    player.setPlayWhenReady(false);
-                } else {
-                    PostVideoBitmapWorkerTask task = new PostVideoBitmapWorkerTask(holder.simpleExoPlayerView, player);
-                    task.execute("dummy URL");
-                }
+                PostVideoBitmapWorkerTask task = new PostVideoBitmapWorkerTask(holder.simpleExoPlayerView, player);
+                task.execute("dummy URL");
+
                 return true;
             }
         });
+
     }
 
     @Override
@@ -100,8 +97,6 @@ public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdap
 
             simpleExoPlayerView = new SimpleExoPlayerView(context);
             simpleExoPlayerView = (SimpleExoPlayerView) itemView.findViewById(R.id.pvPlayerView);
-
-
         }
 
     }
@@ -144,7 +139,7 @@ public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdap
 
                 @Override
                 public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
-                    Log.v(TAG,"Listener-onPlayerStateChanged...");
+                    Log.d(TAG, playbackState + " " + playWhenReady);
 
                 }
 
