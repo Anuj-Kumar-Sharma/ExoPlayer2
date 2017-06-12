@@ -9,6 +9,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 
 import com.example.anujsharma.yoblunt_exoplayer2.R;
 import com.google.android.exoplayer2.ExoPlaybackException;
@@ -61,12 +62,15 @@ public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdap
                     case MotionEvent.ACTION_UP:
                         if (playPosition == position) {
                             if (player.getPlayWhenReady()) {
+                                holder.ivPlayVideo.setVisibility(View.VISIBLE);
                                 player.setPlayWhenReady(false);
                             } else {
+                                holder.ivPlayVideo.setVisibility(View.GONE);
                                 player.setPlayWhenReady(true);
                             }
                         } else {
                             playPosition = position;
+                            holder.ivPlayVideo.setVisibility(View.GONE);
                             holder.simpleExoPlayerView.setPlayer(player);
                             PostVideoBitmapWorkerTask task = new PostVideoBitmapWorkerTask(holder.simpleExoPlayerView, player);
                             task.execute("dummy URL");
@@ -88,12 +92,14 @@ public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdap
     public class ViewHolder extends RecyclerView.ViewHolder {
 
         private SimpleExoPlayerView simpleExoPlayerView;
+        private ImageView ivPlayVideo;
 
         public ViewHolder(View itemView) {
             super(itemView);
 
             simpleExoPlayerView = new SimpleExoPlayerView(context);
             simpleExoPlayerView = (SimpleExoPlayerView) itemView.findViewById(R.id.pvPlayerView);
+            ivPlayVideo = (ImageView) itemView.findViewById(R.id.ivPlayVideo);
         }
 
     }
