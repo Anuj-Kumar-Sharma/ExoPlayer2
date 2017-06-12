@@ -3,7 +3,6 @@ package com.example.anujsharma.yoblunt_exoplayer2.adapters;
 import android.content.Context;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Handler;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -12,22 +11,14 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import com.example.anujsharma.yoblunt_exoplayer2.R;
-import com.google.android.exoplayer2.DefaultLoadControl;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayer;
-import com.google.android.exoplayer2.ExoPlayerFactory;
-import com.google.android.exoplayer2.LoadControl;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.source.LoopingMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.hls.HlsMediaSource;
-import com.google.android.exoplayer2.trackselection.AdaptiveVideoTrackSelection;
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
-import com.google.android.exoplayer2.trackselection.TrackSelection;
-import com.google.android.exoplayer2.trackselection.TrackSelector;
 import com.google.android.exoplayer2.ui.SimpleExoPlayerView;
-import com.google.android.exoplayer2.upstream.BandwidthMeter;
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
@@ -37,22 +28,15 @@ import java.util.ArrayList;
 public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdapter.ViewHolder>{
 
     private static String TAG = "myErrors";
+    public int playPosition = -1;
     private Context context;
     private ArrayList<String> dataUrls;
     private SimpleExoPlayer player;
 
-    public DisplayVideosAdapter(Context context, ArrayList<String> dataUrls) {
+    public DisplayVideosAdapter(Context context, SimpleExoPlayer player, ArrayList<String> dataUrls) {
         this.context = context;
         this.dataUrls = dataUrls;
-
-        Handler mainHandler = new Handler();
-        BandwidthMeter bandwidthMeter = new DefaultBandwidthMeter();
-        TrackSelection.Factory videoTrackSelectionFactory = new AdaptiveVideoTrackSelection.Factory(bandwidthMeter);
-        TrackSelector trackSelector = new DefaultTrackSelector(mainHandler, videoTrackSelectionFactory);
-
-        LoadControl loadControl = new DefaultLoadControl();
-
-        player = ExoPlayerFactory.newSimpleInstance(context, trackSelector, loadControl);
+        this.player = player;
     }
 
     @Override
@@ -62,7 +46,7 @@ public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdap
     }
 
     @Override
-    public void onBindViewHolder(final ViewHolder holder, int position) {
+    public void onBindViewHolder(final ViewHolder holder, final int position) {
         final String videoUrl = dataUrls.get(position);
 
         holder.simpleExoPlayerView.setUseController(false);
@@ -72,12 +56,25 @@ public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdap
         holder.simpleExoPlayerView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                holder.simpleExoPlayerView.setPlayer(player);
 
-                PostVideoBitmapWorkerTask task = new PostVideoBitmapWorkerTask(holder.simpleExoPlayerView, player);
-                task.execute("dummy URL");
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_UP:
+                        if (playPosition == position) {
+                            if (player.getPlayWhenReady()) {
+                                player.setPlayWhenReady(false);
+                            } else {
+                                player.setPlayWhenReady(true);
+                            }
+                        } else {
+                            playPosition = position;
+                            holder.simpleExoPlayerView.setPlayer(player);
+                            PostVideoBitmapWorkerTask task = new PostVideoBitmapWorkerTask(holder.simpleExoPlayerView, player);
+                            task.execute("dummy URL");
+                        }
+                }
 
                 return true;
+
             }
         });
 

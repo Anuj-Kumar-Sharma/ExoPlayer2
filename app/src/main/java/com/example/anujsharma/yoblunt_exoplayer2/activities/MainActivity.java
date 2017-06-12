@@ -1,29 +1,38 @@
 package com.example.anujsharma.yoblunt_exoplayer2.activities;
 
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
-import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 
 import com.example.anujsharma.yoblunt_exoplayer2.R;
 import com.example.anujsharma.yoblunt_exoplayer2.adapters.DisplayVideosAdapter;
 import com.example.anujsharma.yoblunt_exoplayer2.dataStructures.DataUrls;
-
-import java.io.FileNotFoundException;
+import com.google.android.exoplayer2.DefaultLoadControl;
+import com.google.android.exoplayer2.ExoPlayerFactory;
+import com.google.android.exoplayer2.LoadControl;
+import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.trackselection.AdaptiveVideoTrackSelection;
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
+import com.google.android.exoplayer2.trackselection.TrackSelection;
+import com.google.android.exoplayer2.trackselection.TrackSelector;
+import com.google.android.exoplayer2.upstream.BandwidthMeter;
+import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
 
 public class MainActivity extends AppCompatActivity {
 
     private RecyclerView rvMainRecylerView;
     private DisplayVideosAdapter displayVideosAdapter;
     private DataUrls dataUrls;
-    private RecyclerView.LayoutManager layoutManager;
+    private SimpleExoPlayer player;
+    private LinearLayoutManager layoutManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,9 +51,19 @@ public class MainActivity extends AppCompatActivity {
         });
 
         rvMainRecylerView = (RecyclerView) findViewById(R.id.rvMainRecyclerView);
-        dataUrls = new DataUrls(this, 5);
+        dataUrls = new DataUrls(this, 20);
         layoutManager = new LinearLayoutManager(this);
-        displayVideosAdapter = new DisplayVideosAdapter(this, dataUrls.getDataUrls());
+
+        Handler mainHandler = new Handler();
+        BandwidthMeter bandwidthMeter = new DefaultBandwidthMeter();
+        TrackSelection.Factory videoTrackSelectionFactory = new AdaptiveVideoTrackSelection.Factory(bandwidthMeter);
+        TrackSelector trackSelector = new DefaultTrackSelector(mainHandler, videoTrackSelectionFactory);
+
+        LoadControl loadControl = new DefaultLoadControl();
+
+        player = ExoPlayerFactory.newSimpleInstance(this, trackSelector, loadControl);
+
+        displayVideosAdapter = new DisplayVideosAdapter(this, player, dataUrls.getDataUrls());
         rvMainRecylerView.setLayoutManager(layoutManager);
         rvMainRecylerView.setAdapter(displayVideosAdapter);
     }
@@ -69,5 +88,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        player.release();
     }
 }
