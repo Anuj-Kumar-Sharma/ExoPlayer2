@@ -1,6 +1,7 @@
 package com.example.anujsharma.yoblunt_exoplayer2.adapters;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v7.widget.RecyclerView;
@@ -16,9 +17,11 @@ import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.Timeline;
+import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory;
+import com.google.android.exoplayer2.extractor.ExtractorsFactory;
+import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.source.LoopingMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
-import com.google.android.exoplayer2.source.hls.HlsMediaSource;
 import com.google.android.exoplayer2.ui.SimpleExoPlayerView;
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
@@ -26,18 +29,26 @@ import com.google.android.exoplayer2.util.Util;
 
 import java.util.ArrayList;
 
+import wseemann.media.FFmpegMediaMetadataRetriever;
+
 public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdapter.ViewHolder>{
 
     private static String TAG = "myErrors";
     public int playPosition = -1;
+    FFmpegMediaMetadataRetriever metadataRetriever = new FFmpegMediaMetadataRetriever();
+    Bitmap img;
     private Context context;
     private ArrayList<String> dataUrls;
     private SimpleExoPlayer player;
+    private long[] durations;
 
     public DisplayVideosAdapter(Context context, SimpleExoPlayer player, ArrayList<String> dataUrls) {
         this.context = context;
         this.dataUrls = dataUrls;
         this.player = player;
+        durations = new long[dataUrls.size()];
+        //metadataRetriever.setDataSource("https://www.quirksmode.org/html5/videos/big_buck_bunny.mp4", new HashMap<String, String>());
+        //img = metadataRetriever.getFrameAtTime(1000);
     }
 
     @Override
@@ -64,25 +75,33 @@ public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdap
                             if (player.getPlayWhenReady()) {
                                 holder.ivPlayVideo.setVisibility(View.VISIBLE);
                                 player.setPlayWhenReady(false);
+                                durations[position] = player.getCurrentPosition();
+
+//                                Bitmap img = metadataRetriever.getFrameAtTime(durations[position]);
+                                //holder.simpleExoPlayerView.setBackground(new BitmapDrawable(img));
+
                             } else {
                                 holder.ivPlayVideo.setVisibility(View.GONE);
                                 player.setPlayWhenReady(true);
                             }
                         } else {
+                            if (playPosition != -1) {
+                                durations[playPosition] = player.getCurrentPosition();
+                            }
                             playPosition = position;
                             holder.ivPlayVideo.setVisibility(View.GONE);
                             holder.simpleExoPlayerView.setPlayer(player);
-                            PostVideoBitmapWorkerTask task = new PostVideoBitmapWorkerTask(holder.simpleExoPlayerView, player);
+                            Log.d(TAG, durations.length + "");
+                            PostVideoBitmapWorkerTask task = new PostVideoBitmapWorkerTask(holder.simpleExoPlayerView, player, durations[position]);
                             task.execute("dummy URL");
                         }
                 }
-
                 return true;
-
             }
         });
 
     }
+
 
     @Override
     public int getItemCount() {
@@ -105,14 +124,17 @@ public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdap
     }
 
 
+
     public class PostVideoBitmapWorkerTask extends AsyncTask<String, Void, Void> {
 
         private String videoUrl;
         private SimpleExoPlayerView simpleExoPlayerView;
         private SimpleExoPlayer player;
+        private long seekDuration;
 
-        public PostVideoBitmapWorkerTask(SimpleExoPlayerView simpleExoPlayerView, SimpleExoPlayer player) {
+        public PostVideoBitmapWorkerTask(SimpleExoPlayerView simpleExoPlayerView, SimpleExoPlayer player, long seekDuration) {
 
+            this.seekDuration = seekDuration;
             this.player = player;
         }
 
@@ -122,17 +144,20 @@ public class DisplayVideosAdapter extends RecyclerView.Adapter<DisplayVideosAdap
             ////////////////////////////////////////////////////////////////////////////////////////////////
 
             Log.d(TAG, "starting doinBackground");
-            Uri mp4VideoUri =Uri.parse("http://playertest.longtailvideo.com/adaptive/bbbfull/bbbfull.m3u8");
+            //Uri mp4VideoUri =Uri.parse("http://playertest.longtailvideo.com/adaptive/bbbfull/bbbfull.m3u8");
+            Uri mp4VideoUri = Uri.parse("https://www.quirksmode.org/html5/videos/big_buck_bunny.mp4");
 
             DefaultBandwidthMeter bandwidthMeterA = new DefaultBandwidthMeter();
             DefaultDataSourceFactory dataSourceFactory = new DefaultDataSourceFactory(context, Util.getUserAgent(context, "yoblunt_exoplayer2"), bandwidthMeterA);
 
-            MediaSource videoSource = new HlsMediaSource(mp4VideoUri, dataSourceFactory, 1, null, null);
+            ExtractorsFactory extractorsFactory = new DefaultExtractorsFactory();
+            //MediaSource videoSource = new HlsMediaSource(mp4VideoUri, dataSourceFactory, 1, null, null);
+
+            MediaSource videoSource = new ExtractorMediaSource(mp4VideoUri, dataSourceFactory, extractorsFactory, null, null);
+
             final LoopingMediaSource loopingSource = new LoopingMediaSource(videoSource);
-
             player.prepare(loopingSource);
-
-
+            player.seekTo(seekDuration);
             player.addListener(new ExoPlayer.EventListener() {
                 @Override
                 public void onLoadingChanged(boolean isLoading) {

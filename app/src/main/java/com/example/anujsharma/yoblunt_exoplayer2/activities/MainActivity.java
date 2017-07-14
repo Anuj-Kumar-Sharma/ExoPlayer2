@@ -1,5 +1,7 @@
 package com.example.anujsharma.yoblunt_exoplayer2.activities;
 
+import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
@@ -28,6 +30,7 @@ import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
 
 public class MainActivity extends AppCompatActivity {
 
+    private final String TAG = "mainActivity";
     private RecyclerView rvMainRecylerView;
     private DisplayVideosAdapter displayVideosAdapter;
     private DataUrls dataUrls;
@@ -39,7 +42,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        toolbar.setVisibility(View.GONE);
         setSupportActionBar(toolbar);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().setStatusBarColor(Color.BLACK);
+        }
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -66,6 +73,24 @@ public class MainActivity extends AppCompatActivity {
         displayVideosAdapter = new DisplayVideosAdapter(this, player, dataUrls.getDataUrls());
         rvMainRecylerView.setLayoutManager(layoutManager);
         rvMainRecylerView.setAdapter(displayVideosAdapter);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            rvMainRecylerView.setOnScrollChangeListener(new View.OnScrollChangeListener() {
+                @Override
+                public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+
+                    if (displayVideosAdapter.playPosition <= layoutManager.findFirstVisibleItemPosition() - 1 ||
+                            displayVideosAdapter.playPosition >= layoutManager.findLastVisibleItemPosition() + 1) {
+                        if (player.getPlayWhenReady()) {
+                            player.setPlayWhenReady(false);
+                        }
+                    }
+                }
+
+
+            });
+        }
+
     }
 
     @Override
